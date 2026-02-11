@@ -59,7 +59,7 @@
     return;
   }
 
-  NSString *symbolName = [self.controller isEnabled] ? @"lock.fill" : @"lock.open";
+  NSString *symbolName = [self.controller isEnabled] ? @"lock.shield.fill" : @"lock.open";
   NSImage *image = [NSImage imageWithSystemSymbolName:symbolName accessibilityDescription:@"DockLock"];
   if (image != nil) {
     image.template = YES;
@@ -79,24 +79,37 @@
 
   [self.menu removeAllItems];
 
+  NSMenuItem *titleItem = [[NSMenuItem alloc] initWithTitle:@"DockLock" action:nil keyEquivalent:@""];
+  titleItem.enabled = NO;
+  titleItem.image = [self menuSymbol:@"lock.shield"];
+  [self.menu addItem:titleItem];
+
   NSMenuItem *statusItem = [[NSMenuItem alloc] initWithTitle:[self.controller statusLine] action:nil keyEquivalent:@""];
   statusItem.enabled = NO;
   [self.menu addItem:statusItem];
 
+  NSMenuItem *orientationItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Dock orientation: %@", [self.controller dockOrientationLabel]] action:nil keyEquivalent:@""];
+  orientationItem.enabled = NO;
+  orientationItem.image = [self menuSymbol:@"dock.rectangle"];
+  [self.menu addItem:orientationItem];
+
   [self.menu addItem:[NSMenuItem separatorItem]];
 
-  NSMenuItem *toggle = [[NSMenuItem alloc] initWithTitle:@"Enable Lock" action:@selector(toggleLock:) keyEquivalent:@""];
+  NSString *toggleTitle = [self.controller isEnabled] ? @"Disable Lock" : @"Enable Lock";
+  NSMenuItem *toggle = [[NSMenuItem alloc] initWithTitle:toggleTitle action:@selector(toggleLock:) keyEquivalent:@""];
   toggle.target = self;
-  toggle.state = [self.controller isEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
+  toggle.image = [self menuSymbol:[self.controller isEnabled] ? @"lock.open" : @"lock.fill"];
   [self.menu addItem:toggle];
 
   NSMenuItem *relock = [[NSMenuItem alloc] initWithTitle:@"Relock Now" action:@selector(relockNow:) keyEquivalent:@""];
   relock.target = self;
   relock.enabled = [self.controller isEnabled];
+  relock.image = [self menuSymbol:@"arrow.triangle.2.circlepath"];
   [self.menu addItem:relock];
 
-  NSMenuItem *displaysHeader = [[NSMenuItem alloc] initWithTitle:@"Lock Target" action:nil keyEquivalent:@""];
+  NSMenuItem *displaysHeader = [[NSMenuItem alloc] initWithTitle:@"Target Display" action:nil keyEquivalent:@""];
   displaysHeader.enabled = NO;
+  displaysHeader.image = [self menuSymbol:@"display"];
   [self.menu addItem:displaysHeader];
 
   NSString *selectedUUID = [self.controller selectedDisplayUUID] ?: @"";
@@ -123,6 +136,7 @@
       displayItem.representedObject = display[@"uuid"];
       displayItem.state = [selectedUUID isEqualToString:display[@"uuid"]] ? NSControlStateValueOn : NSControlStateValueOff;
       displayItem.enabled = canHost;
+      displayItem.image = [self menuSymbol:canHost ? @"display" : @"nosign"];
       [self.menu addItem:displayItem];
     }
   }
@@ -139,17 +153,30 @@
 
   NSMenuItem *updates = [[NSMenuItem alloc] initWithTitle:@"Check for Updates..." action:@selector(checkForUpdates:) keyEquivalent:@""];
   updates.target = self;
+  updates.image = [self menuSymbol:@"arrow.down.circle"];
   [self.menu addItem:updates];
 
   NSMenuItem *releases = [[NSMenuItem alloc] initWithTitle:@"Open Releases Page" action:@selector(openReleasesPage:) keyEquivalent:@""];
   releases.target = self;
+  releases.image = [self menuSymbol:@"safari"];
   [self.menu addItem:releases];
 
   [self.menu addItem:[NSMenuItem separatorItem]];
 
   NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit DockLock" action:@selector(quitApp:) keyEquivalent:@"q"];
   quitItem.target = self;
+  quitItem.image = [self menuSymbol:@"xmark.circle"];
   [self.menu addItem:quitItem];
+}
+
+- (NSImage *)menuSymbol:(NSString *)symbolName {
+  NSImage *image = [NSImage imageWithSystemSymbolName:symbolName accessibilityDescription:nil];
+  if (image == nil) {
+    return nil;
+  }
+  image.template = YES;
+  image.size = NSMakeSize(14, 14);
+  return image;
 }
 
 - (void)toggleLock:(id)sender {

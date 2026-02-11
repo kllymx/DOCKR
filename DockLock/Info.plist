@@ -10,6 +10,8 @@
   <string>com.<user>.docklock</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
+  <key>CFBundleIconFile</key>
+  <string>DockLock</string>
   <key>CFBundleName</key>
   <string>DockLock</string>
   <key>CFBundlePackageType</key>

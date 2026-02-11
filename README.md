@@ -27,6 +27,12 @@ scripts/build.sh
 This produces:
 - `build/DockLock.app`
 
+To regenerate the app icon (`DockLock.icns`), run:
+
+```bash
+scripts/generate_icon.sh
+```
+
 ## Install
 
 ```bash

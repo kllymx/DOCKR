@@ -21,6 +21,9 @@ clang -fobjc-arc -fmodules \
   -o "$BIN_DIR/$APP_NAME"
 
 cp "$ROOT_DIR/DockLock/Info.plist" "$APP_DIR/Contents/Info.plist"
+if [[ -d "$ROOT_DIR/DockLock/Resources" ]]; then
+  cp -R "$ROOT_DIR/DockLock/Resources/." "$RES_DIR/"
+fi
 
 # Bundle-sign so macOS tracks a stable app identity for Accessibility permissions.
 codesign --force --deep --sign - --identifier com.<user>.docklock "$APP_DIR"
