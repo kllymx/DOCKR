@@ -80,7 +80,7 @@ if ! curl -fsSL "$API_URL" -o "$API_JSON"; then
   exit 1
 fi
 
-readarray -t RELEASE_INFO < <(python3 - "$API_JSON" <<'PY'
+RELEASE_INFO="$(python3 - "$API_JSON" <<'PY'
 import json, os, sys
 path = sys.argv[1]
 with open(path, 'r', encoding='utf-8') as f:
@@ -118,12 +118,12 @@ print(name)
 print(preferred.get('name', ''))
 print(preferred.get('browser_download_url', ''))
 PY
-)
+)"
 
-TAG="${RELEASE_INFO[0]:-}"
-RELEASE_NAME="${RELEASE_INFO[1]:-}"
-ASSET_NAME="${RELEASE_INFO[2]:-}"
-ASSET_URL="${RELEASE_INFO[3]:-}"
+TAG="$(printf '%s\n' "$RELEASE_INFO" | sed -n '1p')"
+RELEASE_NAME="$(printf '%s\n' "$RELEASE_INFO" | sed -n '2p')"
+ASSET_NAME="$(printf '%s\n' "$RELEASE_INFO" | sed -n '3p')"
+ASSET_URL="$(printf '%s\n' "$RELEASE_INFO" | sed -n '4p')"
 
 if [[ -z "$ASSET_URL" ]]; then
   echo "No suitable .zip or .dmg asset found in latest release."
