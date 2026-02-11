@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SRC_DIR="$ROOT_DIR/dockr"
 APP_NAME="DOCKR"
 BUILD_DIR="$ROOT_DIR/build"
 APP_DIR="$BUILD_DIR/${APP_NAME}.app"
@@ -31,15 +32,15 @@ clang -fobjc-arc -fmodules \
   -framework Cocoa \
   -framework CoreGraphics \
   -framework ApplicationServices \
-  "$ROOT_DIR/DockLock/main.m" \
-  "$ROOT_DIR/DockLock/AppDelegate.m" \
-  "$ROOT_DIR/DockLock/DockLockController.m" \
-  "$ROOT_DIR/DockLock/GitHubUpdater.m" \
+  "$SRC_DIR/main.m" \
+  "$SRC_DIR/AppDelegate.m" \
+  "$SRC_DIR/DockLockController.m" \
+  "$SRC_DIR/GitHubUpdater.m" \
   -o "$BIN_DIR/$APP_NAME"
 
-cp "$ROOT_DIR/DockLock/Info.plist" "$APP_DIR/Contents/Info.plist"
-if [[ -d "$ROOT_DIR/DockLock/Resources" ]]; then
-  cp -R "$ROOT_DIR/DockLock/Resources/." "$RES_DIR/"
+cp "$SRC_DIR/Info.plist" "$APP_DIR/Contents/Info.plist"
+if [[ -d "$SRC_DIR/Resources" ]]; then
+  cp -R "$SRC_DIR/Resources/." "$RES_DIR/"
 fi
 
 set_plist_key "CFBundleIdentifier" "$BUNDLE_ID"

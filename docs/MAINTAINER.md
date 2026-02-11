@@ -19,14 +19,14 @@ DOCKR uses one user-facing channel: stable GitHub releases.
 
 Update apply path:
 
-1. `DockLock/GitHubUpdater.m` launches `scripts/update-in-place.sh`.
+1. `dockr/GitHubUpdater.m` launches `scripts/update-in-place.sh`.
 2. `scripts/update-in-place.sh` quits DOCKR.
 3. It runs `scripts/install-latest-release.sh` with `OPEN_APP=0`.
 4. It reopens `/Applications/DOCKR.app`.
 
 ## Required Build Metadata
 
-`DockLock/Info.plist` keys used at runtime:
+`dockr/Info.plist` keys used at runtime:
 
 - `GitHubOwner`
 - `GitHubRepo`
@@ -53,13 +53,13 @@ Build signing uses a stable designated requirement (`identifier "io.dockr.app"`)
 ### Publish (`.github/workflows/publish.yml`)
 
 - Runs on tags matching `v*`.
-- Validates tag version equals `DockLock/Info.plist` `CFBundleShortVersionString`.
+- Validates tag version equals `dockr/Info.plist` `CFBundleShortVersionString`.
 - Builds app and packages `dist/DOCKR-v<version>-macos.zip`.
 - Publishes release assets and SHA256 file.
 
 ## Release Checklist
 
-1. Update version in `DockLock/Info.plist`:
+1. Update version in `dockr/Info.plist`:
    - `CFBundleShortVersionString`
    - `CFBundleVersion`
 2. Commit and merge to `main`.

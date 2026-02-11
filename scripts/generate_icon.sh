@@ -102,7 +102,7 @@ sips -z 512 512 "$BASE_PNG" --out "$ICONSET_DIR/icon_256x256@2x.png" >/dev/null
 sips -z 512 512 "$BASE_PNG" --out "$ICONSET_DIR/icon_512x512.png" >/dev/null
 cp "$BASE_PNG" "$ICONSET_DIR/icon_512x512@2x.png"
 
-mkdir -p "$ROOT_DIR/DockLock/Resources"
-iconutil -c icns "$ICONSET_DIR" -o "$ROOT_DIR/DockLock/Resources/DOCKR.icns"
+mkdir -p "$ROOT_DIR/dockr/Resources"
+iconutil -c icns "$ICONSET_DIR" -o "$ROOT_DIR/dockr/Resources/DOCKR.icns"
 
-echo "Generated $ROOT_DIR/DockLock/Resources/DOCKR.icns"
+echo "Generated $ROOT_DIR/dockr/Resources/DOCKR.icns"
