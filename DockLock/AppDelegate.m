@@ -151,10 +151,15 @@
 
   [self.menu addItem:[NSMenuItem separatorItem]];
 
-  NSMenuItem *updates = [[NSMenuItem alloc] initWithTitle:@"Check for Updates..." action:@selector(checkForUpdates:) keyEquivalent:@""];
+  NSMenuItem *updates = [[NSMenuItem alloc] initWithTitle:@"Check Stable Updates..." action:@selector(checkForUpdates:) keyEquivalent:@""];
   updates.target = self;
   updates.image = [self menuSymbol:@"arrow.down.circle"];
   [self.menu addItem:updates];
+
+  NSMenuItem *devUpdates = [[NSMenuItem alloc] initWithTitle:@"Check Development Updates (main)..." action:@selector(checkForMainUpdates:) keyEquivalent:@""];
+  devUpdates.target = self;
+  devUpdates.image = [self menuSymbol:@"hammer"];
+  [self.menu addItem:devUpdates];
 
   NSMenuItem *releases = [[NSMenuItem alloc] initWithTitle:@"Open Releases Page" action:@selector(openReleasesPage:) keyEquivalent:@""];
   releases.target = self;
@@ -208,6 +213,11 @@
 - (void)openReleasesPage:(id)sender {
   #pragma unused(sender)
   [self.updater openReleasesPage];
+}
+
+- (void)checkForMainUpdates:(id)sender {
+  #pragma unused(sender)
+  [self.updater checkForMainUpdatesInteractive:YES];
 }
 
 - (void)quitApp:(id)sender {

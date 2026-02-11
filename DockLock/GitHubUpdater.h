@@ -4,6 +4,7 @@
 
 - (instancetype)initWithBundle:(NSBundle *)bundle;
 - (void)checkForUpdatesInteractive:(BOOL)interactive;
+- (void)checkForMainUpdatesInteractive:(BOOL)interactive;
 - (void)openReleasesPage;
 
 @end

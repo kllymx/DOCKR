@@ -50,15 +50,34 @@
   }
 
   [self checkReleaseUpdateInteractive:interactive completion:^(BOOL handled) {
+    if (!interactive) {
+      return;
+    }
     if (handled) {
       return;
     }
 
-    [self checkMainBranchUpdateInteractive:interactive completion:^(BOOL mainHandled) {
-      if (!mainHandled && interactive) {
-        [self showInfoAlertWithTitle:@"DOCKR" message:@"You are up to date."];
-      }
-    }];
+    [self showInfoAlertWithTitle:@"DOCKR" message:@"No newer stable release found.\n\nUse \"Check Development Updates (main)...\" for cutting-edge builds."];
+  }];
+}
+
+- (void)checkForMainUpdatesInteractive:(BOOL)interactive {
+  if (![self hasRepoConfig]) {
+    if (interactive) {
+      [self showInfoAlertWithTitle:@"Update Check" message:@"GitHub repository is not configured in Info.plist."];
+    }
+    return;
+  }
+
+  [self checkMainBranchUpdateInteractive:interactive completion:^(BOOL handled) {
+    if (!interactive) {
+      return;
+    }
+    if (handled) {
+      return;
+    }
+
+    [self showInfoAlertWithTitle:@"DOCKR" message:[NSString stringWithFormat:@"No newer commit found on %@.", self.branch]];
   }];
 }
 

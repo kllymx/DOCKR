@@ -20,7 +20,7 @@ macOS can move the Dock between displays based on pointer edge activity. DOCKR p
 - Manual `Relock Now` action.
 - In-app update checks from menu bar:
   - Stable release updates (recommended).
-  - Main-branch updates (advanced fallback).
+  - Main-branch updates (advanced, optional).
 
 ## macOS Side-Dock Constraint (Important)
 
@@ -85,18 +85,18 @@ Accessibility path:
 
 ## Updates from Menu Bar
 
-`Check for Updates...` does:
+DOCKR intentionally separates update channels:
 
-1. Checks latest GitHub release.
-2. If newer semantic version exists, offers one-click update via:
-   - `scripts/install-latest-release.sh`
-3. If no newer release, checks latest commit on `main`.
-4. If newer commit exists, offers advanced main build update via:
-   - `scripts/install-latest-main.sh`
+1. `Check Stable Updates...` (default for normal users)
+   - Checks latest GitHub release.
+   - If newer semantic version exists, offers update via `install-latest-release.sh`.
+2. `Check Development Updates (main)...` (advanced)
+   - Checks latest commit on `main`.
+   - Offers source-build update via `install-latest-main.sh`.
 
-This gives a simple path for most users while still allowing fast main-branch updates.
+This keeps everyday UX cleaner and reduces the chance of repeated Accessibility permission churn from frequent source rebuild updates.
 
-## Best UX for Accessibility Permissions
+## Best UX for Accessibility Permissions (No Apple Developer Account)
 
 To minimize re-authorization prompts across updates:
 
@@ -104,7 +104,7 @@ To minimize re-authorization prompts across updates:
 - Keep app identity stable:
   - Bundle ID: `io.dockr.app`
   - App path: `/Applications/DOCKR.app`
-- Use a consistent signing identity for release artifacts.
+- Avoid frequent `main` updates for non-technical users.
 
 If permission state becomes stale:
 
