@@ -8,14 +8,14 @@ Lock the macOS Dock to the display you choose.
 
 ## Download
 
-[**Download the latest release**](https://github.com/<GITHUB_OWNER>/DOCKR/releases/latest)
+[**Download the latest release**](../../releases/latest)
 
 Or install from Terminal:
 
 ```bash
-git clone https://github.com/<GITHUB_OWNER>/DOCKR.git
+git clone https://github.com/kllymx/DOCKR.git
 cd DOCKR
-OWNER=<GITHUB_OWNER> ./scripts/install-latest-release.sh
+OWNER=kllymx ./scripts/install-latest-release.sh
 ```
 
 ## Updates
