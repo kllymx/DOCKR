@@ -5,8 +5,8 @@
 #import <CoreGraphics/CoreGraphics.h>
 #import <math.h>
 
-static NSString *const kDefaultsEnabledKey = @"docklock.enabled";
-static NSString *const kDefaultsDisplayUUIDKey = @"docklock.selectedDisplayUUID";
+static NSString *const kDefaultsEnabledKey = @"dockr.enabled";
+static NSString *const kDefaultsDisplayUUIDKey = @"dockr.selectedDisplayUUID";
 
 typedef NS_ENUM(NSInteger, DockOrientation) {
   DockOrientationBottom,
@@ -353,7 +353,7 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
     NSAlert *alert = [[NSAlert alloc] init];
     alert.alertStyle = NSAlertStyleInformational;
     alert.messageText = @"Accessibility Required";
-    alert.informativeText = @"DockLock needs Accessibility access to prevent Dock moves on non-target displays. Grant access in System Settings > Privacy & Security > Accessibility, then re-enable lock.";
+    alert.informativeText = @"DOCKR needs Accessibility access to prevent Dock moves on non-target displays. Grant access in System Settings > Privacy & Security > Accessibility, then re-enable lock.";
     [alert addButtonWithTitle:@"OK"];
     [alert runModal];
   }

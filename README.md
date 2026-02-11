@@ -1,79 +1,122 @@
-# DockLock
+# DOCKR
 
-DockLock is a lightweight macOS menu bar utility that keeps the Apple Dock pinned to a selected display.
+DOCKR is a lightweight native macOS menu bar app that keeps the Dock anchored to the display you choose.
 
-## How It Works
+It is built for multi-monitor setups where macOS normally moves the Dock based on pointer edge activity.
 
-macOS does not expose a public API to set the Dock display directly. DockLock uses an Accessibility event tap to block Dock-trigger mouse movement on non-target displays, plus a one-shot relock routine when needed.
+## What DOCKR Does
 
-Design goals:
-- Works whether Dock auto-hide is enabled or disabled.
-- Lets you pick a specific display (external or built-in).
-- Keeps running quietly from the menu bar.
-- Supports GitHub release update checks from the menu.
+- Anchors Dock behavior to a selected display.
+- Runs as a minimal menu bar utility (`LSUIElement`).
+- Prevents Dock edge-trigger moves on non-target displays (Accessibility event tap).
+- Supports manual relock on demand.
+- Checks for updates from GitHub `main` directly in the menu bar.
+
+## Important macOS Behavior
+
+macOS has a hard platform rule for side-oriented Dock:
+
+- `left` Dock: only displays on the global far-left desktop edge can host the Dock.
+- `right` Dock: only displays on the global far-right desktop edge can host the Dock.
+- `bottom` Dock: generally works across more layouts.
+
+DOCKR marks unsupported displays in the menu when Dock is set to `left` or `right`.
 
 ## Requirements
 
 - macOS 13+
 - Xcode Command Line Tools (`clang`)
-- Accessibility permission for DockLock (System Settings > Privacy & Security > Accessibility)
+- Accessibility permission for DOCKR
 
-## Build
+## Install
+
+### Option 1: One-command install from `main` (recommended)
 
 ```bash
-scripts/build.sh
+curl -fsSL https://raw.githubusercontent.com/<user>/DOCKR/main/scripts/install-latest-main.sh | bash
 ```
 
-This produces:
-- `build/DockLock.app`
+This will:
+1. Download latest source from `main`
+2. Build the app
+3. Install to `/Applications/DOCKR.app`
+4. Launch it
 
-To regenerate the app icon (`DockLock.icns`), run:
+### Option 2: Build locally
+
+```bash
+git clone https://github.com/<user>/DOCKR.git
+cd DOCKR
+scripts/build.sh
+scripts/install.sh
+```
+
+## Usage
+
+1. Open `DOCKR` from Applications.
+2. Grant Accessibility access when prompted.
+3. Use menu bar icon to:
+   - Enable/disable lock
+   - Select target display
+   - Relock now
+
+## Updates from Menu Bar
+
+DOCKR checks GitHub commits on `main`.
+
+- Menu item: `Check for Updates...`
+- If a newer commit is found, DOCKR can run update installer in Terminal automatically:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/<user>/DOCKR/main/scripts/install-latest-main.sh | bash
+```
+
+This means users can update directly from the menu bar when new code is pushed to `main`.
+
+## Accessibility Permission
+
+DOCKR requires Accessibility permission to monitor/block edge-trigger mouse movement events.
+
+Path:
+- System Settings → Privacy & Security → Accessibility
+
+If permission seems stale after reinstall:
+
+```bash
+tccutil reset Accessibility io.dockr.app
+```
+
+Then relaunch `/Applications/DOCKR.app` and re-grant permission.
+
+## Build Outputs
+
+- App bundle: `build/DOCKR.app`
+- Installed app: `/Applications/DOCKR.app`
+
+Build script automatically embeds current git commit SHA into `Info.plist` (`BuildGitCommit`) for update comparison.
+
+## Icon
+
+DOCKR includes a generated custom lock icon (`DOCKR.icns`).
+
+To regenerate:
 
 ```bash
 scripts/generate_icon.sh
 ```
 
-## Install
+## Project Layout
 
-```bash
-scripts/install.sh
-```
+- `DockLock/` - App source (Objective-C / AppKit)
+- `scripts/build.sh` - Local build
+- `scripts/install.sh` - Local install to Applications
+- `scripts/install-latest-main.sh` - Remote install/update script
+- `scripts/generate_icon.sh` - Icon generation
 
-This copies the app to `/Applications/DockLock.app` and launches it.
+## Distribution Model
 
-## Usage
-
-1. Click the DockLock menu bar icon.
-2. Choose `Lock Target` display.
-3. Keep `Enable Lock` on.
-4. Use `Relock Now` anytime.
-
-On first enable, macOS will prompt for Accessibility access. Without this permission, lock protection cannot work.
-
-## Side Dock Limitation (macOS Behavior)
-
-When Dock orientation is `left` or `right`, macOS can only place the Dock on displays that touch the outermost edge of the full virtual desktop on that side.
-
-- `left` Dock: only displays on the global far-left edge are eligible
-- `right` Dock: only displays on the global far-right edge are eligible
-
-DockLock marks ineligible displays in the menu when using side Dock orientations.
-
-## Updating from the Menu Bar
-
-`Check for Updates...` queries `https://api.github.com/repos/<owner>/<repo>/releases/latest`.
-
-Configure your GitHub repo in `DockLock/Info.plist`:
-- `GitHubOwner`
-- `GitHubRepo`
-
-When a newer release is detected, DockLock offers to open the release page.
-
-## Notes
-
-- Dock relocation uses an implementation strategy similar to other Dock lock tools: there is no public Apple API for direct display assignment.
-- Because this is unsandboxed and intended for source builds/GitHub distribution, it is not App Store-targeted.
+DOCKR is intended for open-source GitHub distribution (not App Store sandbox constraints).
 
 ## License
 
-MIT (add your preferred license text in `LICENSE`).
+MIT

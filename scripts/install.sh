@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-APP_PATH="$ROOT_DIR/build/DockLock.app"
-TARGET_PATH="/Applications/DockLock.app"
+APP_PATH="$ROOT_DIR/build/DOCKR.app"
+TARGET_PATH="/Applications/DOCKR.app"
 
 if [[ ! -d "$APP_PATH" ]]; then
   echo "App bundle missing. Run scripts/build.sh first."

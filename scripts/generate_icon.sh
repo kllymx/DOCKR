@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TMP_DIR="$(mktemp -d)"
-ICONSET_DIR="$TMP_DIR/DockLock.iconset"
+ICONSET_DIR="$TMP_DIR/DOCKR.iconset"
 BASE_PNG="$TMP_DIR/base.png"
 GEN_SRC="$TMP_DIR/gen_icon.m"
 
@@ -103,6 +103,6 @@ sips -z 512 512 "$BASE_PNG" --out "$ICONSET_DIR/icon_512x512.png" >/dev/null
 cp "$BASE_PNG" "$ICONSET_DIR/icon_512x512@2x.png"
 
 mkdir -p "$ROOT_DIR/DockLock/Resources"
-iconutil -c icns "$ICONSET_DIR" -o "$ROOT_DIR/DockLock/Resources/DockLock.icns"
+iconutil -c icns "$ICONSET_DIR" -o "$ROOT_DIR/DockLock/Resources/DOCKR.icns"
 
-echo "Generated $ROOT_DIR/DockLock/Resources/DockLock.icns"
+echo "Generated $ROOT_DIR/DockLock/Resources/DOCKR.icns"

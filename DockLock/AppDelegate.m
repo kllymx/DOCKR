@@ -26,7 +26,7 @@
   };
 
   self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
-  self.menu = [[NSMenu alloc] initWithTitle:@"DockLock"];
+  self.menu = [[NSMenu alloc] initWithTitle:@"DOCKR"];
   self.menu.delegate = self;
   self.statusItem.menu = self.menu;
 
@@ -60,7 +60,7 @@
   }
 
   NSString *symbolName = [self.controller isEnabled] ? @"lock.shield.fill" : @"lock.open";
-  NSImage *image = [NSImage imageWithSystemSymbolName:symbolName accessibilityDescription:@"DockLock"];
+  NSImage *image = [NSImage imageWithSystemSymbolName:symbolName accessibilityDescription:@"DOCKR"];
   if (image != nil) {
     image.template = YES;
     self.statusItem.button.image = image;
@@ -79,7 +79,7 @@
 
   [self.menu removeAllItems];
 
-  NSMenuItem *titleItem = [[NSMenuItem alloc] initWithTitle:@"DockLock" action:nil keyEquivalent:@""];
+  NSMenuItem *titleItem = [[NSMenuItem alloc] initWithTitle:@"DOCKR" action:nil keyEquivalent:@""];
   titleItem.enabled = NO;
   titleItem.image = [self menuSymbol:@"lock.shield"];
   [self.menu addItem:titleItem];
@@ -163,7 +163,7 @@
 
   [self.menu addItem:[NSMenuItem separatorItem]];
 
-  NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit DockLock" action:@selector(quitApp:) keyEquivalent:@"q"];
+  NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit DOCKR" action:@selector(quitApp:) keyEquivalent:@"q"];
   quitItem.target = self;
   quitItem.image = [self menuSymbol:@"xmark.circle"];
   [self.menu addItem:quitItem];
