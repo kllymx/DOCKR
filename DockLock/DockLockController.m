@@ -488,7 +488,12 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
   DockOrientation orientation = [self currentDockOrientation];
   CGPoint originalMouse = [self currentMouseLocation];
 
-  NSArray<NSNumber *> *fractions = @[@0.50, @0.20, @0.80];
+  NSArray<NSNumber *> *fractions = nil;
+  if (orientation == DockOrientationBottom) {
+    fractions = @[@0.50, @0.20, @0.80];
+  } else {
+    fractions = @[@0.05, @0.15, @0.25, @0.35, @0.45, @0.55, @0.65, @0.75, @0.85, @0.95];
+  }
 
   self.isRelocking = YES;
   CGDisplayHideCursor(kCGDirectMainDisplay);
@@ -503,10 +508,10 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
     CGWarpMouseCursorPosition(approach);
     usleep(35000);
 
-    NSInteger travelSteps = (orientation == DockOrientationBottom) ? 8 : 12;
-    NSInteger holdSteps = (orientation == DockOrientationBottom) ? 8 : 20;
+    NSInteger travelSteps = (orientation == DockOrientationBottom) ? 8 : 14;
+    NSInteger holdSteps = (orientation == DockOrientationBottom) ? 8 : 28;
     useconds_t travelDelay = (orientation == DockOrientationBottom) ? 14000 : 17000;
-    useconds_t holdDelay = (orientation == DockOrientationBottom) ? 26000 : 32000;
+    useconds_t holdDelay = (orientation == DockOrientationBottom) ? 26000 : 24000;
 
     for (NSInteger i = 0; i < travelSteps; i++) {
       double progress = (double)i / (double)MAX(travelSteps - 1, 1);
@@ -527,17 +532,17 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
     for (NSInteger hold = 0; hold < holdSteps; hold++) {
       CGPoint holdPoint = trigger;
       if (orientation != DockOrientationBottom) {
-        CGFloat jitter = (hold % 2 == 0) ? -14.0 : 14.0;
+        CGFloat jitter = (hold % 2 == 0) ? -20.0 : 20.0;
         holdPoint.y = MAX(CGRectGetMinY(bounds) + 8.0, MIN(CGRectGetMaxY(bounds) - 8.0, trigger.y + jitter));
       }
 
-      CGPoint pressurePoint = [self pressurePointForTrigger:holdPoint orientation:orientation];
-      CGWarpMouseCursorPosition(pressurePoint);
-      usleep(8000);
       CGWarpMouseCursorPosition(holdPoint);
       if (source != NULL) {
         CGEventRef event = CGEventCreateMouseEvent(source, kCGEventMouseMoved, holdPoint, kCGMouseButtonLeft);
         if (event != NULL) {
+          CGPoint delta = [self edgePressureDeltaForOrientation:orientation];
+          CGEventSetIntegerValueField(event, kCGMouseEventDeltaX, (int64_t)llround(delta.x));
+          CGEventSetIntegerValueField(event, kCGMouseEventDeltaY, (int64_t)llround(delta.y));
           CGEventSetIntegerValueField(event, kCGEventSourceUserData, 0xD0C4A5C4);
           CGEventPost(kCGHIDEventTap, event);
           CFRelease(event);
@@ -821,14 +826,14 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
   }
 }
 
-- (CGPoint)pressurePointForTrigger:(CGPoint)trigger orientation:(DockOrientation)orientation {
+- (CGPoint)edgePressureDeltaForOrientation:(DockOrientation)orientation {
   switch (orientation) {
     case DockOrientationBottom:
-      return CGPointMake(trigger.x, trigger.y + 16.0);
+      return CGPointMake(0.0, 30.0);
     case DockOrientationLeft:
-      return CGPointMake(trigger.x - 16.0, trigger.y);
+      return CGPointMake(-40.0, 0.0);
     case DockOrientationRight:
-      return CGPointMake(trigger.x + 16.0, trigger.y);
+      return CGPointMake(40.0, 0.0);
   }
 }
 
