@@ -33,7 +33,7 @@ DOCKR marks unsupported displays in the menu when Dock is set to `left` or `righ
 ### Option 1: One-command install from `main` (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<user>/DOCKR/main/scripts/install-latest-main.sh | bash
+curl -fsSL https://raw.githubusercontent.com/<GITHUB_OWNER>/DOCKR/main/scripts/install-latest-main.sh | bash
 ```
 
 This will:
@@ -45,7 +45,7 @@ This will:
 ### Option 2: Build locally
 
 ```bash
-git clone https://github.com/<user>/DOCKR.git
+git clone https://github.com/<GITHUB_OWNER>/DOCKR.git
 cd DOCKR
 scripts/build.sh
 scripts/install.sh
@@ -68,7 +68,7 @@ DOCKR checks GitHub commits on `main`.
 - If a newer commit is found, DOCKR can run update installer in Terminal automatically:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<user>/DOCKR/main/scripts/install-latest-main.sh | bash
+curl -fsSL https://raw.githubusercontent.com/<GITHUB_OWNER>/DOCKR/main/scripts/install-latest-main.sh | bash
 ```
 
 This means users can update directly from the menu bar when new code is pushed to `main`.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OWNER="${OWNER:-<user>}"
+OWNER="${OWNER:-<GITHUB_OWNER>}"
 REPO="${REPO:-DOCKR}"
 BRANCH="${BRANCH:-main}"
 

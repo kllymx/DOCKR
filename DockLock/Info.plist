@@ -25,7 +25,7 @@
   <key>BuildGitCommit</key>
   <string>unknown</string>
   <key>GitHubOwner</key>
-  <string><user></string>
+  <string><GITHUB_OWNER></string>
   <key>GitHubRepo</key>
   <string>DOCKR</string>
   <key>GitDefaultBranch</key>
