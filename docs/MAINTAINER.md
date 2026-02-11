@@ -39,6 +39,8 @@ Build with owner/repo set so distributed binaries can self-update:
 DOCKR_GITHUB_OWNER=<github-owner> DOCKR_GITHUB_REPO=DOCKR ./scripts/build.sh
 ```
 
+Build signing uses a stable designated requirement (`identifier "io.dockr.app"`) so Accessibility trust survives updates better than cdhash-based ad-hoc signatures.
+
 ## GitHub Actions
 
 ### CI (`.github/workflows/ci.yml`)

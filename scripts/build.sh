@@ -54,6 +54,8 @@ fi
 set_plist_key "BuildGitCommit" "$BUILD_GIT_COMMIT"
 
 # Bundle-sign so macOS tracks a stable app identity for Accessibility permissions.
-codesign --force --deep --sign - --identifier "$BUNDLE_ID" "$APP_DIR"
+codesign --force --deep --sign - --identifier "$BUNDLE_ID" \
+  --requirements "=designated => identifier \"$BUNDLE_ID\"" \
+  "$APP_DIR"
 
 echo "Built: $APP_DIR"

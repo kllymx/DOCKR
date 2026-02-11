@@ -52,6 +52,8 @@ tccutil reset Accessibility io.dockr.app
 
 Then reopen `/Applications/DOCKR.app` and re-grant permission.
 
+If you used older DOCKR builds (before `v0.2.1`), do the reset once after upgrading. New releases use a stable signing requirement to reduce repeated re-prompts.
+
 ## Maintainers
 
 Release flow and build details are in `docs/MAINTAINER.md`.
