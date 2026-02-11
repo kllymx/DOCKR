@@ -24,6 +24,9 @@
     [weakSelf rebuildMenu];
     [weakSelf updateStatusItemAppearance];
   };
+  self.updater.stateDidChangeHandler = ^{
+    [weakSelf rebuildMenu];
+  };
 
   self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
   self.menu = [[NSMenu alloc] initWithTitle:@"DOCKR"];
@@ -33,8 +36,8 @@
   [self updateStatusItemAppearance];
   [self rebuildMenu];
 
-  // Silent background update checks every 12 hours.
-  self.backgroundUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:12 * 60 * 60
+  // Silent background update checks every 15 minutes.
+  self.backgroundUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:15 * 60
                                                                 target:self
                                                               selector:@selector(checkForUpdatesInBackground:)
                                                               userInfo:nil
@@ -151,15 +154,17 @@
 
   [self.menu addItem:[NSMenuItem separatorItem]];
 
-  NSMenuItem *updates = [[NSMenuItem alloc] initWithTitle:@"Check Stable Updates..." action:@selector(checkForUpdates:) keyEquivalent:@""];
+  NSMenuItem *updates = [[NSMenuItem alloc] initWithTitle:@"Check for Updates..." action:@selector(checkForUpdates:) keyEquivalent:@""];
   updates.target = self;
   updates.image = [self menuSymbol:@"arrow.down.circle"];
   [self.menu addItem:updates];
 
-  NSMenuItem *devUpdates = [[NSMenuItem alloc] initWithTitle:@"Check Development Updates (main)..." action:@selector(checkForMainUpdates:) keyEquivalent:@""];
-  devUpdates.target = self;
-  devUpdates.image = [self menuSymbol:@"hammer"];
-  [self.menu addItem:devUpdates];
+  if ([self.updater hasPendingUpdate]) {
+    NSMenuItem *applyUpdate = [[NSMenuItem alloc] initWithTitle:[self.updater pendingUpdateTitle] action:@selector(restartToUpdate:) keyEquivalent:@""];
+    applyUpdate.target = self;
+    applyUpdate.image = [self menuSymbol:@"arrow.triangle.2.circlepath.circle.fill"];
+    [self.menu addItem:applyUpdate];
+  }
 
   NSMenuItem *releases = [[NSMenuItem alloc] initWithTitle:@"Open Releases Page" action:@selector(openReleasesPage:) keyEquivalent:@""];
   releases.target = self;
@@ -210,14 +215,14 @@
   [self.updater checkForUpdatesInteractive:YES];
 }
 
+- (void)restartToUpdate:(id)sender {
+  #pragma unused(sender)
+  [self.updater installPendingUpdateInteractive:YES];
+}
+
 - (void)openReleasesPage:(id)sender {
   #pragma unused(sender)
   [self.updater openReleasesPage];
-}
-
-- (void)checkForMainUpdates:(id)sender {
-  #pragma unused(sender)
-  [self.updater checkForMainUpdatesInteractive:YES];
 }
 
 - (void)quitApp:(id)sender {

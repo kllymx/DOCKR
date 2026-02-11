@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate shell scripts
+        run: |
+          bash -n scripts/build.sh
+          bash -n scripts/install.sh
+          bash -n scripts/install-latest-release.sh
+          bash -n scripts/install-latest-main.sh
+          bash -n scripts/update-in-place.sh
+          bash -n scripts/package-release.sh
+
+      - name: Build DOCKR
+        env:
+          DOCKR_GITHUB_OWNER: ${{ github.repository_owner }}
+          DOCKR_GITHUB_REPO: ${{ github.event.repository.name }}
+        run: ./scripts/build.sh
+
+      - name: Package artifact
+        run: ./scripts/package-release.sh

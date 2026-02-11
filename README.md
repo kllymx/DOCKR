@@ -4,29 +4,23 @@
   <img src="assets/dockr-logo.png" alt="DOCKR logo" width="140" />
 </p>
 
-DOCKR is a lightweight macOS menu bar app that keeps the Dock anchored to a display you choose.
+Lock the macOS Dock to the display you choose.
 
-## Install
+## Download
 
-### Recommended (stable release)
+[**Download the latest release**](https://github.com/<GITHUB_OWNER>/DOCKR/releases/latest)
 
-```bash
-git clone https://github.com/<GITHUB_OWNER>/DOCKR.git
-cd DOCKR
-./scripts/install-latest-release.sh
-```
-
-### Development (latest `main`)
-
-```bash
-./scripts/install-latest-main.sh
-```
-
-### One-line install (optional)
+Or install from Terminal:
 
 ```bash
 OWNER=<GITHUB_OWNER> bash <(curl -fsSL https://raw.githubusercontent.com/<GITHUB_OWNER>/DOCKR/main/scripts/install-latest-release.sh)
 ```
+
+## Updates
+
+- DOCKR checks for stable updates automatically every 15 minutes.
+- You can also trigger a check from the menu bar with `Check for Updates...`.
+- When an update is available, DOCKR shows `Restart to Update (...)` in the menu.
 
 ## First Launch
 
@@ -36,19 +30,6 @@ OWNER=<GITHUB_OWNER> bash <(curl -fsSL https://raw.githubusercontent.com/<GITHUB
    - Enable lock
    - Select target display
    - Use `Relock Now` if needed
-
-## Update
-
-Use the menu bar:
-
-- `Check Stable Updates...` for normal users
-- `Check Development Updates (main)...` for early/testing builds
-
-If you build your own fork and want in-app update checks to target your repo:
-
-```bash
-DOCKR_GITHUB_OWNER=<GITHUB_OWNER> ./scripts/build.sh
-```
 
 ## Known macOS Constraint
 
@@ -69,9 +50,9 @@ tccutil reset Accessibility io.dockr.app
 
 Then reopen `/Applications/DOCKR.app` and re-grant permission.
 
-## Docs
+## Maintainers
 
-- `docs/MAINTAINER.md` - release workflow, update channel behavior, signing/notarization notes
+Release flow and build details are in `docs/MAINTAINER.md`.
 
 ## License
 

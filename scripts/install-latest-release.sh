@@ -4,6 +4,8 @@ set -euo pipefail
 OWNER="${OWNER:-${DOCKR_GITHUB_OWNER:-}}"
 REPO="${REPO:-${DOCKR_GITHUB_REPO:-DOCKR}}"
 TARGET_APP_PATH="${TARGET_APP_PATH:-/Applications/DOCKR.app}"
+OPEN_APP="${OPEN_APP:-1}"
+FALLBACK_TO_MAIN="${FALLBACK_TO_MAIN:-0}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
@@ -67,11 +69,15 @@ trap cleanup EXIT
 API_URL="https://api.github.com/repos/${OWNER}/${REPO}/releases/latest"
 echo "Fetching latest release metadata..."
 if ! curl -fsSL "$API_URL" -o "$API_JSON"; then
-  echo "No published release found yet; falling back to latest main build."
-  if [[ -x "$(dirname "$0")/install-latest-main.sh" ]]; then
-    exec "$(dirname "$0")/install-latest-main.sh"
+  if [[ "$FALLBACK_TO_MAIN" == "1" ]]; then
+    echo "No published release found yet; falling back to latest main build."
+    if [[ -x "$(dirname "$0")/install-latest-main.sh" ]]; then
+      exec "$(dirname "$0")/install-latest-main.sh"
+    fi
+    exec bash <(curl -fsSL "https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install-latest-main.sh")
   fi
-  exec bash <(curl -fsSL "https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install-latest-main.sh")
+  echo "No published release found for ${OWNER}/${REPO}."
+  exit 1
 fi
 
 readarray -t RELEASE_INFO < <(python3 - "$API_JSON" <<'PY'
@@ -153,6 +159,8 @@ fi
 echo "Installing to $TARGET_APP_PATH"
 rm -rf "$TARGET_APP_PATH"
 cp -R "$APP_SOURCE_PATH" "$TARGET_APP_PATH"
-open "$TARGET_APP_PATH"
+if [[ "$OPEN_APP" == "1" ]]; then
+  open "$TARGET_APP_PATH"
+fi
 
 echo "Installed DOCKR from release ${TAG}."

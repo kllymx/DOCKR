@@ -7,6 +7,11 @@
 @property (nonatomic, copy) NSString *owner;
 @property (nonatomic, copy) NSString *repo;
 @property (nonatomic, copy) NSString *branch;
+@property (nonatomic, assign) BOOL checkInFlight;
+@property (nonatomic, assign) BOOL pendingUpdate;
+@property (nonatomic, copy) NSString *pendingVersion;
+@property (nonatomic, copy) NSString *pendingTag;
+@property (nonatomic, copy) NSString *pendingReleaseURL;
 @end
 
 @implementation GitHubUpdater
@@ -25,6 +30,10 @@
   self.owner = owner.length > 0 ? owner : @"";
   self.repo = repo.length > 0 ? repo : @"";
   self.branch = branch.length > 0 ? branch : @"main";
+  self.pendingUpdate = NO;
+  self.pendingVersion = @"";
+  self.pendingTag = @"";
+  self.pendingReleaseURL = @"";
 
   return self;
 }
@@ -41,70 +50,151 @@
   }
 }
 
+- (BOOL)hasPendingUpdate {
+  return self.pendingUpdate;
+}
+
+- (NSString *)pendingUpdateTitle {
+  if (!self.pendingUpdate) {
+    return @"Restart to Update";
+  }
+
+  if (self.pendingVersion.length > 0) {
+    return [NSString stringWithFormat:@"Restart to Update (%@)", self.pendingVersion];
+  }
+
+  if (self.pendingTag.length > 0) {
+    return [NSString stringWithFormat:@"Restart to Update (%@)", self.pendingTag];
+  }
+
+  return @"Restart to Update";
+}
+
 - (void)checkForUpdatesInteractive:(BOOL)interactive {
   if (![self hasRepoConfig]) {
     if (interactive) {
-      [self showInfoAlertWithTitle:@"Update Check" message:@"GitHub repository is not configured in Info.plist."];
+      [self showInfoAlertWithTitle:@"Update Check" message:@"GitHub update metadata is not configured in this build."];
     }
     return;
   }
 
-  [self checkReleaseUpdateInteractive:interactive completion:^(BOOL handled) {
+  if (self.checkInFlight) {
+    return;
+  }
+
+  self.checkInFlight = YES;
+  [self checkReleaseUpdateWithCompletion:^(BOOL hasUpdate, NSString *latestVersion, NSString *latestTag, NSString *releaseURL, NSError *error) {
+    self.checkInFlight = NO;
+
+    if (error != nil) {
+      if (interactive) {
+        [self showInfoAlertWithTitle:@"DOCKR" message:@"Could not check for updates right now."];
+      }
+      return;
+    }
+
+    [self setPendingUpdate:hasUpdate latestVersion:latestVersion latestTag:latestTag releaseURL:releaseURL];
+
     if (!interactive) {
       return;
     }
-    if (handled) {
+
+    if (!hasUpdate) {
+      [self showInfoAlertWithTitle:@"DOCKR" message:@"You are up to date."];
       return;
     }
 
-    [self showInfoAlertWithTitle:@"DOCKR" message:@"No newer stable release found.\n\nUse \"Check Development Updates (main)...\" for cutting-edge builds."];
+    NSString *currentVersion = [self.bundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"0";
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.alertStyle = NSAlertStyleInformational;
+    alert.messageText = @"DOCKR Update Ready";
+    alert.informativeText = [NSString stringWithFormat:@"Version %@ is available (you have %@).\n\nDOCKR will restart to apply the update.", latestVersion.length > 0 ? latestVersion : latestTag, currentVersion];
+    [alert addButtonWithTitle:@"Restart to Update"];
+    [alert addButtonWithTitle:@"Later"];
+    [alert addButtonWithTitle:@"View Release"];
+
+    NSModalResponse response = [alert runModal];
+    if (response == NSAlertFirstButtonReturn) {
+      [self installPendingUpdateInteractive:NO];
+    } else if (response == NSAlertThirdButtonReturn) {
+      NSURL *downloadURL = [NSURL URLWithString:releaseURL.length > 0 ? releaseURL : [NSString stringWithFormat:@"https://github.com/%@/%@/releases/latest", self.owner, self.repo]];
+      if (downloadURL != nil) {
+        [[NSWorkspace sharedWorkspace] openURL:downloadURL];
+      }
+    }
   }];
 }
 
-- (void)checkForMainUpdatesInteractive:(BOOL)interactive {
-  if (![self hasRepoConfig]) {
+- (void)installPendingUpdateInteractive:(BOOL)interactive {
+  if (![self hasPendingUpdate]) {
     if (interactive) {
-      [self showInfoAlertWithTitle:@"Update Check" message:@"GitHub repository is not configured in Info.plist."];
+      [self showInfoAlertWithTitle:@"DOCKR" message:@"No update is pending. Check for updates first."];
     }
     return;
   }
 
-  [self checkMainBranchUpdateInteractive:interactive completion:^(BOOL handled) {
-    if (!interactive) {
+  if (interactive) {
+    NSAlert *confirm = [[NSAlert alloc] init];
+    confirm.alertStyle = NSAlertStyleInformational;
+    confirm.messageText = @"Restart DOCKR to update?";
+    confirm.informativeText = @"DOCKR will quit, install the latest stable release, and relaunch.";
+    [confirm addButtonWithTitle:@"Restart and Update"];
+    [confirm addButtonWithTitle:@"Cancel"];
+    if ([confirm runModal] != NSAlertFirstButtonReturn) {
       return;
     }
-    if (handled) {
-      return;
+  }
+
+  NSString *scriptURL = [NSString stringWithFormat:@"https://raw.githubusercontent.com/%@/%@/%@/scripts/update-in-place.sh", self.owner, self.repo, self.branch];
+  NSString *bundleID = [self.bundle bundleIdentifier] ?: @"io.dockr.app";
+  NSString *pidString = [NSString stringWithFormat:@"%d", [NSProcessInfo processInfo].processIdentifier];
+
+  NSString *command = [NSString stringWithFormat:@"OWNER=%@ REPO=%@ TARGET_APP_PATH=%@ APP_BUNDLE_ID=%@ APP_PID=%@ bash <(curl -fsSL %@)",
+                       [self shellEscape:self.owner],
+                       [self shellEscape:self.repo],
+                       [self shellEscape:@"/Applications/DOCKR.app"],
+                       [self shellEscape:bundleID],
+                       [self shellEscape:pidString],
+                       [self shellEscape:scriptURL]];
+
+  NSTask *task = [[NSTask alloc] init];
+  task.launchPath = @"/bin/bash";
+  task.arguments = @[ @"-lc", command ];
+
+  @try {
+    [task launch];
+  } @catch (NSException *exception) {
+    #pragma unused(exception)
+    NSURL *fallback = [NSURL URLWithString:scriptURL];
+    if (fallback != nil) {
+      [[NSWorkspace sharedWorkspace] openURL:fallback];
     }
-
-    [self showInfoAlertWithTitle:@"DOCKR" message:[NSString stringWithFormat:@"No newer commit found on %@.", self.branch]];
-  }];
+    if (interactive) {
+      [self showInfoAlertWithTitle:@"DOCKR" message:@"Could not start update installer."];
+    }
+  }
 }
 
-- (BOOL)hasRepoConfig {
-  return self.owner.length > 0 && self.repo.length > 0;
-}
+#pragma mark - Release updates
 
-#pragma mark - Release updates (recommended)
-
-- (void)checkReleaseUpdateInteractive:(BOOL)interactive completion:(void (^)(BOOL handled))completion {
+- (void)checkReleaseUpdateWithCompletion:(void (^)(BOOL hasUpdate, NSString *latestVersion, NSString *latestTag, NSString *releaseURL, NSError *error))completion {
   NSString *apiString = [NSString stringWithFormat:@"https://api.github.com/repos/%@/%@/releases/latest", self.owner, self.repo];
   NSURL *url = [NSURL URLWithString:apiString];
   if (url == nil) {
-    completion(NO);
+    completion(NO, @"", @"", @"", [NSError errorWithDomain:@"DOCKR.Update" code:-3 userInfo:nil]);
     return;
   }
 
   [self fetchJSONFromURL:url completion:^(NSDictionary *json, NSError *error, NSInteger statusCode) {
     if (error != nil || statusCode < 200 || statusCode >= 300 || ![json isKindOfClass:[NSDictionary class]]) {
-      completion(NO);
+      completion(NO, @"", @"", @"", error ?: [NSError errorWithDomain:@"DOCKR.Update" code:-4 userInfo:nil]);
       return;
     }
 
-    NSString *latestTag = [json[@"tag_name"] isKindOfClass:[NSString class]] ? json[@"tag_name"] : nil;
-    NSString *releaseURL = [json[@"html_url"] isKindOfClass:[NSString class]] ? json[@"html_url"] : nil;
+    NSString *latestTag = [json[@"tag_name"] isKindOfClass:[NSString class]] ? json[@"tag_name"] : @"";
+    NSString *releaseURL = [json[@"html_url"] isKindOfClass:[NSString class]] ? json[@"html_url"] : @"";
     if (latestTag.length == 0) {
-      completion(NO);
+      completion(NO, @"", @"", @"", [NSError errorWithDomain:@"DOCKR.Update" code:-5 userInfo:nil]);
       return;
     }
 
@@ -112,101 +202,43 @@
     NSString *currentVersion = [self.bundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"0";
     BOOL hasUpdate = [self isVersion:latestVersion newerThan:currentVersion];
 
-    if (!hasUpdate) {
-      completion(NO);
-      return;
-    }
-
-    if (!interactive) {
-      completion(YES);
-      return;
-    }
-
-    NSAlert *alert = [[NSAlert alloc] init];
-    alert.alertStyle = NSAlertStyleInformational;
-    alert.messageText = @"DOCKR Stable Update";
-    alert.informativeText = [NSString stringWithFormat:@"Version %@ is available (you have %@).", latestVersion, currentVersion];
-    [alert addButtonWithTitle:@"Update Now"]; 
-    [alert addButtonWithTitle:@"View Release"]; 
-    [alert addButtonWithTitle:@"Cancel"]; 
-
-    NSModalResponse response = [alert runModal];
-    if (response == NSAlertFirstButtonReturn) {
-      [self runInstallerInTerminalForScript:@"install-latest-release.sh"];
-    } else if (response == NSAlertSecondButtonReturn) {
-      NSURL *downloadURL = [NSURL URLWithString:releaseURL ?: [NSString stringWithFormat:@"https://github.com/%@/%@/releases/latest", self.owner, self.repo]];
-      if (downloadURL != nil) {
-        [[NSWorkspace sharedWorkspace] openURL:downloadURL];
-      }
-    }
-
-    completion(YES);
+    completion(hasUpdate, latestVersion, latestTag, releaseURL, nil);
   }];
 }
 
-#pragma mark - Main branch updates (fallback)
+- (void)setPendingUpdate:(BOOL)hasUpdate
+           latestVersion:(NSString *)latestVersion
+               latestTag:(NSString *)latestTag
+              releaseURL:(NSString *)releaseURL {
+  BOOL stateChanged = (self.pendingUpdate != hasUpdate) ||
+    ![self.pendingVersion isEqualToString:latestVersion ?: @""] ||
+    ![self.pendingTag isEqualToString:latestTag ?: @""] ||
+    ![self.pendingReleaseURL isEqualToString:releaseURL ?: @""];
 
-- (void)checkMainBranchUpdateInteractive:(BOOL)interactive completion:(void (^)(BOOL handled))completion {
-  NSString *currentCommit = [[self.bundle objectForInfoDictionaryKey:@"BuildGitCommit"] ?: @"" stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-  BOOL currentKnown = currentCommit.length > 0 && ![currentCommit isEqualToString:@"unknown"];
+  self.pendingUpdate = hasUpdate;
+  self.pendingVersion = latestVersion ?: @"";
+  self.pendingTag = latestTag ?: @"";
+  self.pendingReleaseURL = releaseURL ?: @"";
 
-  NSString *apiString = [NSString stringWithFormat:@"https://api.github.com/repos/%@/%@/commits/%@", self.owner, self.repo, self.branch];
-  NSURL *url = [NSURL URLWithString:apiString];
-  if (url == nil) {
-    completion(NO);
-    return;
+  if (stateChanged) {
+    [self notifyStateDidChange];
   }
+}
 
-  [self fetchJSONFromURL:url completion:^(NSDictionary *json, NSError *error, NSInteger statusCode) {
-    if (error != nil || statusCode < 200 || statusCode >= 300 || ![json isKindOfClass:[NSDictionary class]]) {
-      completion(NO);
-      return;
-    }
-
-    NSString *latestCommit = [json[@"sha"] isKindOfClass:[NSString class]] ? json[@"sha"] : nil;
-    NSString *latestCommitURL = [json[@"html_url"] isKindOfClass:[NSString class]] ? json[@"html_url"] : nil;
-    if (latestCommit.length == 0) {
-      completion(NO);
-      return;
-    }
-
-    BOOL hasMainUpdate = !currentKnown || ![latestCommit hasPrefix:currentCommit];
-    if (!hasMainUpdate) {
-      completion(NO);
-      return;
-    }
-
-    if (!interactive) {
-      completion(YES);
-      return;
-    }
-
-    NSString *latestShort = [self shortCommit:latestCommit];
-    NSString *currentShort = currentKnown ? [self shortCommit:currentCommit] : @"unknown";
-
-    NSAlert *alert = [[NSAlert alloc] init];
-    alert.alertStyle = NSAlertStyleInformational;
-    alert.messageText = @"DOCKR Main Update";
-    alert.informativeText = [NSString stringWithFormat:@"A newer commit exists on %@.\n\nCurrent: %@\nLatest: %@\n\nTip: Stable release updates are best for avoiding Accessibility re-authorization prompts.", self.branch, currentShort, latestShort];
-    [alert addButtonWithTitle:@"Install Main Build"]; 
-    [alert addButtonWithTitle:@"View Commit"]; 
-    [alert addButtonWithTitle:@"Cancel"]; 
-
-    NSModalResponse response = [alert runModal];
-    if (response == NSAlertFirstButtonReturn) {
-      [self runInstallerInTerminalForScript:@"install-latest-main.sh"];
-    } else if (response == NSAlertSecondButtonReturn) {
-      NSURL *changes = [NSURL URLWithString:latestCommitURL ?: [NSString stringWithFormat:@"https://github.com/%@/%@/commits/%@", self.owner, self.repo, self.branch]];
-      if (changes != nil) {
-        [[NSWorkspace sharedWorkspace] openURL:changes];
-      }
-    }
-
-    completion(YES);
-  }];
+- (BOOL)hasRepoConfig {
+  return self.owner.length > 0 && self.repo.length > 0;
 }
 
 #pragma mark - Shared helpers
+
+- (void)notifyStateDidChange {
+  if (self.stateDidChangeHandler == nil) {
+    return;
+  }
+  dispatch_async(dispatch_get_main_queue(), ^{
+    self.stateDidChangeHandler();
+  });
+}
 
 - (void)fetchJSONFromURL:(NSURL *)url completion:(void (^)(NSDictionary *json, NSError *error, NSInteger statusCode))completion {
   NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
@@ -239,23 +271,6 @@
   [task resume];
 }
 
-- (void)runInstallerInTerminalForScript:(NSString *)scriptName {
-  NSString *rawScriptURL = [NSString stringWithFormat:@"https://raw.githubusercontent.com/%@/%@/%@/scripts/%@", self.owner, self.repo, self.branch, scriptName];
-  NSString *command = [NSString stringWithFormat:@"curl -fsSL %@ | bash", rawScriptURL];
-  NSString *escaped = [self appleScriptEscapedString:command];
-  NSString *source = [NSString stringWithFormat:@"tell application \"Terminal\"\nactivate\ndo script \"%@\"\nend tell", escaped];
-
-  NSAppleScript *script = [[NSAppleScript alloc] initWithSource:source];
-  NSDictionary *error = nil;
-  [script executeAndReturnError:&error];
-  if (error != nil) {
-    NSURL *fallback = [NSURL URLWithString:rawScriptURL];
-    if (fallback != nil) {
-      [[NSWorkspace sharedWorkspace] openURL:fallback];
-    }
-  }
-}
-
 - (NSString *)normalizedVersionFromTag:(NSString *)tag {
   NSString *trimmed = [tag stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
   if ([trimmed hasPrefix:@"v"] || [trimmed hasPrefix:@"V"]) {
@@ -268,17 +283,13 @@
   return [lhs compare:rhs options:NSNumericSearch] == NSOrderedDescending;
 }
 
-- (NSString *)shortCommit:(NSString *)commit {
-  if (commit.length <= 7) {
-    return commit;
+- (NSString *)shellEscape:(NSString *)value {
+  if (value == nil || value.length == 0) {
+    return @"''";
   }
-  return [commit substringToIndex:7];
-}
 
-- (NSString *)appleScriptEscapedString:(NSString *)value {
-  NSString *escaped = [value stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"];
-  escaped = [escaped stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""];
-  return escaped;
+  NSString *escaped = [value stringByReplacingOccurrencesOfString:@"'" withString:@"'\\''"];
+  return [NSString stringWithFormat:@"'%@'", escaped];
 }
 
 - (void)showInfoAlertWithTitle:(NSString *)title message:(NSString *)message {

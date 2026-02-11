@@ -1,77 +1,83 @@
 # Maintainer Guide
 
-## Distribution Strategy
+## Distribution Model
 
-DOCKR currently supports two channels:
+DOCKR uses one user-facing channel: stable GitHub releases.
 
-1. Stable release channel (recommended for users)
-2. Main branch channel (advanced/testing)
+- End users install from `releases/latest`.
+- In-app update checks also target `releases/latest`.
+- The app prompts users to restart when an update is ready.
 
-The app UI defaults to stable updates first to reduce permission churn and update friction.
+## In-App Update Flow
 
-## Update Scripts
+`GitHubUpdater` checks `https://api.github.com/repos/<owner>/<repo>/releases/latest`.
 
-- `scripts/install-latest-release.sh`
-  - Downloads latest GitHub release asset (`.zip` or `.dmg`) containing `DOCKR.app`
-  - Installs to `/Applications/DOCKR.app`
-  - Falls back to `main` installer if no release exists
+- Silent check on launch
+- Silent check every 15 minutes
+- Manual check from menu: `Check for Updates...`
+- If newer version exists, menu exposes `Restart to Update (...)`
 
-- `scripts/install-latest-main.sh`
-  - Downloads repo source zip from `main`
-  - Builds locally
-  - Installs to `/Applications/DOCKR.app`
+Update apply path:
 
-## In-App Update Behavior
+1. `DockLock/GitHubUpdater.m` launches `scripts/update-in-place.sh`.
+2. `scripts/update-in-place.sh` quits DOCKR.
+3. It runs `scripts/install-latest-release.sh` with `OPEN_APP=0`.
+4. It reopens `/Applications/DOCKR.app`.
 
-`Check Stable Updates...`
-- Checks latest release (`/releases/latest`)
-- Compares release tag semver to `CFBundleShortVersionString`
-- Offers installer run in Terminal
+## Required Build Metadata
 
-`Check Development Updates (main)...`
-- Checks latest commit on configured branch (`GitDefaultBranch`)
-- Compares against `BuildGitCommit` in app plist
-- Offers main installer run in Terminal
+`DockLock/Info.plist` keys used at runtime:
 
-## Build Metadata
-
-`scripts/build.sh` embeds:
-- `BuildGitCommit` (short SHA)
-- `GitHubOwner` (from `DOCKR_GITHUB_OWNER`, optional)
-
-Info.plist keys used by updater:
 - `GitHubOwner`
 - `GitHubRepo`
 - `GitDefaultBranch`
+- `CFBundleShortVersionString`
 
-For update checks to work in distributed binaries, set `DOCKR_GITHUB_OWNER` during build.
+Build with owner/repo set so distributed binaries can self-update:
+
+```bash
+DOCKR_GITHUB_OWNER=<github-owner> DOCKR_GITHUB_REPO=DOCKR ./scripts/build.sh
+```
+
+## GitHub Actions
+
+### CI (`.github/workflows/ci.yml`)
+
+- Runs on `main` push and PRs.
+- Validates shell script syntax.
+- Builds DOCKR.
+- Packages release zip artifact.
+
+### Publish (`.github/workflows/publish.yml`)
+
+- Runs on tags matching `v*`.
+- Validates tag version equals `DockLock/Info.plist` `CFBundleShortVersionString`.
+- Builds app and packages `dist/DOCKR-v<version>-macos.zip`.
+- Publishes release assets and SHA256 file.
 
 ## Release Checklist
 
-1. Build app: `scripts/build.sh`
-2. Verify install: `scripts/install.sh`
-3. Tag version update in `DockLock/Info.plist`:
+1. Update version in `DockLock/Info.plist`:
    - `CFBundleShortVersionString`
    - `CFBundleVersion`
-4. Create GitHub release and upload `.zip` or `.dmg` containing `DOCKR.app`
+2. Commit and merge to `main`.
+3. Tag and push:
 
-## Signing / Notarization Notes
+```bash
+git tag v<version>
+git push origin v<version>
+```
 
-Without Apple Developer account:
-- You can distribute source and unsigned/ad-hoc builds.
-- Some users may hit Gatekeeper or Accessibility trust friction.
+4. Verify GitHub release assets exist:
+   - `DOCKR-v<version>-macos.zip`
+   - `DOCKR-v<tag>-SHA256.txt`
 
-With Apple Developer account:
-- Sign with Developer ID
-- Notarize and staple release artifacts
-- Best UX for non-technical users
+## Permission Recovery
 
-## Common Permission Recovery
-
-If Accessibility trust is stale:
+If Accessibility trust appears stale:
 
 ```bash
 tccutil reset Accessibility io.dockr.app
 ```
 
-Then relaunch app and re-grant.
+Then relaunch DOCKR and re-grant permission.
