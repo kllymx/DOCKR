@@ -1,48 +1,68 @@
 # DOCKR
 
-DOCKR is a lightweight native macOS menu bar app that keeps the Dock anchored to the display you choose.
+DOCKR is a lightweight native macOS menu bar app that keeps the Dock anchored to a display you choose.
 
-It is built for multi-monitor setups where macOS normally moves the Dock based on pointer edge activity.
+It is designed for multi-monitor users who want predictable Dock behavior without killing/restarting Dock processes.
 
-## What DOCKR Does
+## Why DOCKR
 
-- Anchors Dock behavior to a selected display.
-- Runs as a minimal menu bar utility (`LSUIElement`).
-- Prevents Dock edge-trigger moves on non-target displays (Accessibility event tap).
-- Supports manual relock on demand.
-- Checks for updates from GitHub `main` directly in the menu bar.
+macOS can move the Dock between displays based on pointer edge activity. DOCKR prevents that by:
 
-## Important macOS Behavior
+- Watching mouse movement with an Accessibility event tap.
+- Blocking Dock-trigger edge events on non-target displays.
+- Allowing controlled relock operations from the menu bar when needed.
 
-macOS has a hard platform rule for side-oriented Dock:
+## Features
 
-- `left` Dock: only displays on the global far-left desktop edge can host the Dock.
-- `right` Dock: only displays on the global far-right desktop edge can host the Dock.
-- `bottom` Dock: generally works across more layouts.
+- Native AppKit menu bar app (`LSUIElement`) with minimal footprint.
+- Per-display target selection with persistence.
+- Works with Dock auto-hide on/off.
+- Manual `Relock Now` action.
+- In-app update checks from menu bar:
+  - Stable release updates (recommended).
+  - Main-branch updates (advanced fallback).
 
-DOCKR marks unsupported displays in the menu when Dock is set to `left` or `right`.
+## macOS Side-Dock Constraint (Important)
+
+This is an Apple platform behavior:
+
+- `left` Dock can only live on displays touching the global far-left edge.
+- `right` Dock can only live on displays touching the global far-right edge.
+- `bottom` Dock works across more arrangements.
+
+DOCKR marks ineligible displays when Dock is on `left` or `right`.
 
 ## Requirements
 
 - macOS 13+
-- Xcode Command Line Tools (`clang`)
+- Xcode Command Line Tools (`clang`) for source builds
 - Accessibility permission for DOCKR
 
-## Install
+## Install Options
 
-### Option 1: One-command install from `main` (recommended)
+### 1. Stable release install (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/<GITHUB_OWNER>/DOCKR/main/scripts/install-latest-release.sh | bash
+```
+
+What it does:
+1. Fetches latest GitHub release metadata
+2. Downloads release app asset (`.zip` or `.dmg`)
+3. Installs `/Applications/DOCKR.app`
+4. Launches app
+
+If no release exists yet, it automatically falls back to installing from `main`.
+
+### 2. Main-branch build install (advanced)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/<GITHUB_OWNER>/DOCKR/main/scripts/install-latest-main.sh | bash
 ```
 
-This will:
-1. Download latest source from `main`
-2. Build the app
-3. Install to `/Applications/DOCKR.app`
-4. Launch it
+This rebuilds from source on your machine. Useful for early access/testing.
 
-### Option 2: Build locally
+### 3. Manual local build
 
 ```bash
 git clone https://github.com/<GITHUB_OWNER>/DOCKR.git
@@ -51,71 +71,83 @@ scripts/build.sh
 scripts/install.sh
 ```
 
-## Usage
+## First Launch Setup
 
-1. Open `DOCKR` from Applications.
-2. Grant Accessibility access when prompted.
-3. Use menu bar icon to:
-   - Enable/disable lock
+1. Open `DOCKR`.
+2. Grant Accessibility permission when prompted.
+3. In menu bar:
+   - Enable lock
    - Select target display
-   - Relock now
+   - Use `Relock Now` if Dock is currently off target
+
+Accessibility path:
+- System Settings → Privacy & Security → Accessibility
 
 ## Updates from Menu Bar
 
-DOCKR checks GitHub commits on `main`.
+`Check for Updates...` does:
 
-- Menu item: `Check for Updates...`
-- If a newer commit is found, DOCKR can run update installer in Terminal automatically:
+1. Checks latest GitHub release.
+2. If newer semantic version exists, offers one-click update via:
+   - `scripts/install-latest-release.sh`
+3. If no newer release, checks latest commit on `main`.
+4. If newer commit exists, offers advanced main build update via:
+   - `scripts/install-latest-main.sh`
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/<GITHUB_OWNER>/DOCKR/main/scripts/install-latest-main.sh | bash
-```
+This gives a simple path for most users while still allowing fast main-branch updates.
 
-This means users can update directly from the menu bar when new code is pushed to `main`.
+## Best UX for Accessibility Permissions
 
-## Accessibility Permission
+To minimize re-authorization prompts across updates:
 
-DOCKR requires Accessibility permission to monitor/block edge-trigger mouse movement events.
+- Prefer stable release updates over source rebuilds.
+- Keep app identity stable:
+  - Bundle ID: `io.dockr.app`
+  - App path: `/Applications/DOCKR.app`
+- Use a consistent signing identity for release artifacts.
 
-Path:
-- System Settings → Privacy & Security → Accessibility
-
-If permission seems stale after reinstall:
+If permission state becomes stale:
 
 ```bash
 tccutil reset Accessibility io.dockr.app
 ```
 
-Then relaunch `/Applications/DOCKR.app` and re-grant permission.
+Then relaunch `/Applications/DOCKR.app` and re-grant.
 
-## Build Outputs
+## Maintainer Guidance (Release Channel)
 
-- App bundle: `build/DOCKR.app`
-- Installed app: `/Applications/DOCKR.app`
+For the smoothest user updates, publish release artifacts that contain `DOCKR.app` as `.zip` or `.dmg`.
 
-Build script automatically embeds current git commit SHA into `Info.plist` (`BuildGitCommit`) for update comparison.
+Recommended release process:
+1. Build app
+2. Sign/notarize with Developer ID
+3. Upload `.zip` or `.dmg` to GitHub Release
+4. Tag with semantic version (`v0.2.0`, etc.)
 
-## Icon
+The in-app stable updater keys off latest release version tag.
 
-DOCKR includes a generated custom lock icon (`DOCKR.icns`).
+## Scripts
 
-To regenerate:
+- `scripts/build.sh` - Build local app bundle (`build/DOCKR.app`)
+- `scripts/install.sh` - Install local build to `/Applications/DOCKR.app`
+- `scripts/install-latest-release.sh` - Install latest GitHub release artifact
+- `scripts/install-latest-main.sh` - Install latest source from `main`
+- `scripts/generate_icon.sh` - Regenerate `DOCKR.icns`
 
-```bash
-scripts/generate_icon.sh
-```
+## App Metadata
 
-## Project Layout
+- Bundle Identifier: `io.dockr.app`
+- Build commit embedded in plist: `BuildGitCommit`
+- Update repo settings in plist:
+  - `GitHubOwner`
+  - `GitHubRepo`
+  - `GitDefaultBranch`
 
-- `DockLock/` - App source (Objective-C / AppKit)
-- `scripts/build.sh` - Local build
-- `scripts/install.sh` - Local install to Applications
-- `scripts/install-latest-main.sh` - Remote install/update script
-- `scripts/generate_icon.sh` - Icon generation
+## Project Structure
 
-## Distribution Model
-
-DOCKR is intended for open-source GitHub distribution (not App Store sandbox constraints).
+- `DockLock/` - Core app source (Objective-C / AppKit)
+- `DockLock/Resources/DOCKR.icns` - App icon
+- `scripts/` - Build/install/update helpers
 
 ## License
 
