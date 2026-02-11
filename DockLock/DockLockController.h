@@ -9,6 +9,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSArray<NSDictionary *> *)availableDisplays;
 - (nullable NSString *)selectedDisplayUUID;
 - (NSString *)selectedDisplayLabel;
+- (NSString *)dockOrientationLabel;
 - (BOOL)isEnabled;
 - (NSString *)statusLine;
 

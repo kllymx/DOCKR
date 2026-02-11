@@ -44,6 +44,15 @@ This copies the app to `/Applications/DockLock.app` and launches it.
 
 On first enable, macOS will prompt for Accessibility access. Without this permission, lock protection cannot work.
 
+## Side Dock Limitation (macOS Behavior)
+
+When Dock orientation is `left` or `right`, macOS can only place the Dock on displays that touch the outermost edge of the full virtual desktop on that side.
+
+- `left` Dock: only displays on the global far-left edge are eligible
+- `right` Dock: only displays on the global far-right edge are eligible
+
+DockLock marks ineligible displays in the menu when using side Dock orientations.
+
 ## Updating from the Menu Bar
 
 `Check for Updates...` queries `https://api.github.com/repos/<owner>/<repo>/releases/latest`.

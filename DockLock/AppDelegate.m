@@ -101,6 +101,7 @@
 
   NSString *selectedUUID = [self.controller selectedDisplayUUID] ?: @"";
   NSArray<NSDictionary *> *displays = [self.controller availableDisplays];
+  BOOL hasUnavailableDisplay = NO;
 
   if (displays.count == 0) {
     NSMenuItem *noneItem = [[NSMenuItem alloc] initWithTitle:@"No displays found" action:nil keyEquivalent:@""];
@@ -110,14 +111,28 @@
     for (NSDictionary *display in displays) {
       NSString *name = display[@"name"] ?: @"Display";
       BOOL isBuiltin = [display[@"isBuiltin"] boolValue];
+      BOOL canHost = [display[@"canHostCurrentOrientation"] boolValue];
       NSString *title = [name stringByAppendingString:isBuiltin ? @" (Built-in)" : @" (External)"];
+      if (!canHost) {
+        hasUnavailableDisplay = YES;
+        title = [title stringByAppendingString:@" (Unavailable for current Dock side)"];
+      }
 
       NSMenuItem *displayItem = [[NSMenuItem alloc] initWithTitle:title action:@selector(selectDisplay:) keyEquivalent:@""];
       displayItem.target = self;
       displayItem.representedObject = display[@"uuid"];
       displayItem.state = [selectedUUID isEqualToString:display[@"uuid"]] ? NSControlStateValueOn : NSControlStateValueOff;
+      displayItem.enabled = canHost;
       [self.menu addItem:displayItem];
     }
+  }
+
+  if (hasUnavailableDisplay) {
+    NSString *orientation = [self.controller dockOrientationLabel];
+    NSString *hint = [NSString stringWithFormat:@"Only outermost %@-edge displays can host Dock", orientation];
+    NSMenuItem *hintItem = [[NSMenuItem alloc] initWithTitle:hint action:nil keyEquivalent:@""];
+    hintItem.enabled = NO;
+    [self.menu addItem:hintItem];
   }
 
   [self.menu addItem:[NSMenuItem separatorItem]];

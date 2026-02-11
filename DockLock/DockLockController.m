@@ -3,6 +3,7 @@
 #import <AppKit/AppKit.h>
 #import <ApplicationServices/ApplicationServices.h>
 #import <CoreGraphics/CoreGraphics.h>
+#import <math.h>
 
 static NSString *const kDefaultsEnabledKey = @"docklock.enabled";
 static NSString *const kDefaultsDisplayUUIDKey = @"docklock.selectedDisplayUUID";
@@ -86,6 +87,7 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
     screenNames[screenNumber] = name;
   }
 
+  DockOrientation orientation = [self currentDockOrientation];
   NSMutableArray<NSDictionary *> *displays = [NSMutableArray array];
   for (uint32_t i = 0; i < displayCount; i++) {
     CGDirectDisplayID displayID = ids[i];
@@ -97,12 +99,14 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
     CGRect bounds = CGDisplayBounds(displayID);
     BOOL isBuiltin = CGDisplayIsBuiltin(displayID);
     NSString *name = screenNames[@(displayID)] ?: [NSString stringWithFormat:@"Display %u", displayID];
+    BOOL canHost = [self displayIDCanHostDockForOrientation:displayID orientation:orientation];
 
     NSDictionary *display = @{
       @"displayID": @(displayID),
       @"uuid": uuid,
       @"name": name,
       @"isBuiltin": @(isBuiltin),
+      @"canHostCurrentOrientation": @(canHost),
       @"x": @(CGRectGetMinX(bounds)),
       @"y": @(CGRectGetMinY(bounds)),
       @"width": @(CGRectGetWidth(bounds)),
@@ -156,6 +160,18 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
   return @"Selected display disconnected";
 }
 
+- (NSString *)dockOrientationLabel {
+  DockOrientation orientation = [self currentDockOrientation];
+  switch (orientation) {
+    case DockOrientationBottom:
+      return @"bottom";
+    case DockOrientationLeft:
+      return @"left";
+    case DockOrientationRight:
+      return @"right";
+  }
+}
+
 - (BOOL)isEnabled {
   return self.lockEnabled;
 }
@@ -171,6 +187,10 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
 
   if (self.eventTap == NULL) {
     return [NSString stringWithFormat:@"Lock on | %@ | protection inactive", [self selectedDisplayLabel]];
+  }
+
+  if (![self selectedDisplayCanHostCurrentDockOrientation]) {
+    return [NSString stringWithFormat:@"Lock on | %@ | not eligible for %@ dock", [self selectedDisplayLabel], [self dockOrientationLabel]];
   }
 
   CGDirectDisplayID dockDisplay = [self currentDockDisplayID];
@@ -244,8 +264,22 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
     return;
   }
 
-  CGDirectDisplayID dockDisplay = [self currentDockDisplayID];
   DockOrientation orientation = [self currentDockOrientation];
+  BOOL targetCanHost = [self displayIDCanHostDockForOrientation:targetDisplay orientation:orientation];
+  if (!targetCanHost) {
+    if ([reason isEqualToString:@"Manual relock"] || [reason isEqualToString:@"Display changed"]) {
+      NSAlert *alert = [[NSAlert alloc] init];
+      alert.alertStyle = NSAlertStyleInformational;
+      alert.messageText = @"Display Not Eligible for Side Dock";
+      alert.informativeText = [NSString stringWithFormat:@"With Dock on %@, macOS can only place it on displays touching the outer %@ edge. Choose an eligible display or switch Dock to bottom.", [self dockOrientationLabel], [self dockOrientationLabel]];
+      [alert addButtonWithTitle:@"OK"];
+      [alert runModal];
+    }
+    [self notifyStateChange];
+    return;
+  }
+
+  CGDirectDisplayID dockDisplay = [self currentDockDisplayID];
   BOOL shouldTrustDetection = (orientation == DockOrientationBottom);
   BOOL forceRelock = [reason isEqualToString:@"Manual relock"] || [reason isEqualToString:@"Display changed"];
   if (!forceRelock && shouldTrustDetection && dockDisplay == targetDisplay) {
@@ -422,6 +456,9 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
   }
 
   DockOrientation orientation = [self currentDockOrientation];
+  if (![self displayIDCanHostDockForOrientation:targetDisplay orientation:orientation]) {
+    return NO;
+  }
 
   for (NSDictionary *display in displays) {
     CGDirectDisplayID displayID = (CGDirectDisplayID)[display[@"displayID"] unsignedIntValue];
@@ -750,6 +787,50 @@ static CGEventRef DockLockEventTapCallback(CGEventTapProxy proxy, CGEventType ty
   }
 
   return kCGNullDirectDisplay;
+}
+
+- (BOOL)selectedDisplayCanHostCurrentDockOrientation {
+  CGDirectDisplayID targetDisplay = [self targetDisplayID];
+  if (targetDisplay == kCGNullDirectDisplay) {
+    return NO;
+  }
+
+  return [self displayIDCanHostDockForOrientation:targetDisplay orientation:[self currentDockOrientation]];
+}
+
+- (BOOL)displayIDCanHostDockForOrientation:(CGDirectDisplayID)displayID orientation:(DockOrientation)orientation {
+  if (orientation == DockOrientationBottom) {
+    return YES;
+  }
+
+  uint32_t displayCount = 0;
+  CGGetActiveDisplayList(0, NULL, &displayCount);
+  if (displayCount == 0) {
+    return NO;
+  }
+
+  CGDirectDisplayID ids[displayCount];
+  CGGetActiveDisplayList(displayCount, ids, &displayCount);
+
+  CGRect targetBounds = CGDisplayBounds(displayID);
+  CGFloat minX = CGFLOAT_MAX;
+  CGFloat maxX = -CGFLOAT_MAX;
+  for (uint32_t i = 0; i < displayCount; i++) {
+    CGRect bounds = CGDisplayBounds(ids[i]);
+    minX = MIN(minX, CGRectGetMinX(bounds));
+    maxX = MAX(maxX, CGRectGetMaxX(bounds));
+  }
+
+  CGFloat epsilon = 1.0;
+  if (orientation == DockOrientationLeft) {
+    return fabs(CGRectGetMinX(targetBounds) - minX) <= epsilon;
+  }
+
+  if (orientation == DockOrientationRight) {
+    return fabs(CGRectGetMaxX(targetBounds) - maxX) <= epsilon;
+  }
+
+  return YES;
 }
 
 - (NSString *)uuidStringForDisplayID:(CGDirectDisplayID)displayID {
