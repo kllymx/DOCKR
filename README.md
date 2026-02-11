@@ -13,7 +13,9 @@ Lock the macOS Dock to the display you choose.
 Or install from Terminal:
 
 ```bash
-OWNER=<GITHUB_OWNER> bash <(curl -fsSL https://raw.githubusercontent.com/<GITHUB_OWNER>/DOCKR/main/scripts/install-latest-release.sh)
+git clone https://github.com/<GITHUB_OWNER>/DOCKR.git
+cd DOCKR
+OWNER=<GITHUB_OWNER> ./scripts/install-latest-release.sh
 ```
 
 ## Updates
