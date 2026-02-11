@@ -1,5 +1,9 @@
 # DOCKR
 
+<p align="center">
+  <img src="assets/dockr-logo.png" alt="DOCKR logo" width="140" />
+</p>
+
 DOCKR is a lightweight native macOS menu bar app that keeps the Dock anchored to a display you choose.
 
 It is designed for multi-monitor users who want predictable Dock behavior without killing/restarting Dock processes.
