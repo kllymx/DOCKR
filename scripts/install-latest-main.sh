@@ -1,9 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OWNER="${OWNER:-<GITHUB_OWNER>}"
-REPO="${REPO:-DOCKR}"
+OWNER="${OWNER:-${DOCKR_GITHUB_OWNER:-}}"
+REPO="${REPO:-${DOCKR_GITHUB_REPO:-DOCKR}}"
 BRANCH="${BRANCH:-main}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+detect_owner_from_git_remote() {
+  local remote_url path
+  remote_url="$(git -C "$SCRIPT_ROOT" remote get-url origin 2>/dev/null || true)"
+  if [[ -z "$remote_url" ]]; then
+    return
+  fi
+
+  case "$remote_url" in
+    git@github.com:*)
+      path="${remote_url#git@github.com:}"
+      ;;
+    https://github.com/*)
+      path="${remote_url#https://github.com/}"
+      ;;
+    ssh://git@github.com/*)
+      path="${remote_url#ssh://git@github.com/}"
+      ;;
+    *)
+      return
+      ;;
+  esac
+
+  path="${path%.git}"
+  OWNER="${path%%/*}"
+}
 
 for tool in curl unzip mktemp bash; do
   if ! command -v "$tool" >/dev/null 2>&1; then
@@ -11,6 +39,16 @@ for tool in curl unzip mktemp bash; do
     exit 1
   fi
 done
+
+if [[ -z "$OWNER" ]]; then
+  detect_owner_from_git_remote
+fi
+
+if [[ -z "$OWNER" ]]; then
+  echo "Missing GitHub owner."
+  echo "Run with: OWNER=<github-owner> ./scripts/install-latest-main.sh"
+  exit 1
+fi
 
 WORK_DIR="$(mktemp -d)"
 ZIP_PATH="$WORK_DIR/${REPO}-${BRANCH}.zip"

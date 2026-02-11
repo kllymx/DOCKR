@@ -37,11 +37,14 @@ The app UI defaults to stable updates first to reduce permission churn and updat
 
 `scripts/build.sh` embeds:
 - `BuildGitCommit` (short SHA)
+- `GitHubOwner` (from `DOCKR_GITHUB_OWNER`, optional)
 
 Info.plist keys used by updater:
 - `GitHubOwner`
 - `GitHubRepo`
 - `GitDefaultBranch`
+
+For update checks to work in distributed binaries, set `DOCKR_GITHUB_OWNER` during build.
 
 ## Release Checklist
 
